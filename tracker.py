@@ -27,11 +27,13 @@ def ask_ai(prompt):
     return None
 
 def clean_url(url):
-    url = url.strip()
+    if isinstance(url, list):
+        url = next(iter(url), "")
+    url = str(url).strip()
     m = re.search(r"amazon\.in.*?/dp/([A-Z0-9]{10})", url)
     if m:
         return "https://www." + "amazon.in/dp/" + m.group(1)
-    return url.split("?")
+    return next(iter(url.split("?")), url)
 
 def get_page_info(url):
     headers = {"Accept-Language": "en-IN,en;q=0.9", "Referer": "https://google.com"}
@@ -39,12 +41,14 @@ def get_page_info(url):
         r = cffi_req.get(url, impersonate=browser, headers=headers, timeout=15)
         soup = BeautifulSoup(r.text, "html.parser")
         raw_title = soup.title.string.strip() if soup.title and soup.title.string else "Product"
-        title = re.sub(r"^(Amazon\.in\s*:\s*|Buy\s+)", "", raw_title).split(":").split("|")[:60].strip()
+        clean_t = re.sub(r"^(Amazon\.in\s*:\s*|Buy\s+)", "", raw_title)
+        clean_t = next(iter(clean_t.split(":")), clean_t)
+        clean_t = next(iter(clean_t.split("|")), clean_t)[:60].strip()
         for tag in soup(["script", "style", "nav", "footer"]):
             tag.decompose()
         text = " ".join(soup.get_text(" ").split())
         if len(text) >= 800:
-            return title, text
+            return clean_t, text
         time.sleep(1.5)
     return "Product", ""
 
@@ -76,8 +80,8 @@ def process_telegram_commands(products, history):
 
         elif text.lower().startswith("/remove"):
             parts = text.split()
-            if len(parts) == 2 and parts.isdigit():
-                idx = int(parts) - 1
+            if len(parts) == 2 and parts[-1].isdigit():
+                idx = int(parts[-1]) - 1
                 if 0 <= idx < len(products):
                     removed = products.pop(idx)
                     history.pop(removed["url"], None)
@@ -88,7 +92,7 @@ def process_telegram_commands(products, history):
         else:
             urls = re.findall(r"https?://\S+", text)
             if urls:
-                raw_url = urls
+                raw_url = next(iter(urls))
                 cleaned = clean_url(raw_url)
                 custom_name = text.replace(raw_url, "").strip()
 
