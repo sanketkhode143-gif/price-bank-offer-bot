@@ -31,9 +31,9 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: python tracker.py
 
-      - name: Save updated price history
+      - name: Save updated products and price history
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "Price Tracker Bot"
-          git add price_history.json
-          git diff --quiet && git diff --staged --quiet || (git commit -m "Update price history" && git push)
+          git add products.json price_history.json
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Update products & price history" && git push)
