@@ -1,0 +1,41 @@
+name: 20-Min Price & Bank Offer Agent
+
+on:
+  schedule:
+    - cron: '*/20 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  track-prices:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies & Playwright Chromium
+        run: |
+          pip install playwright google-genai requests
+          playwright install chromium
+          playwright install-deps chromium
+
+      - name: Run Price & Offer Tracker
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python tracker.py
+
+      - name: Save updated price history
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "Price Tracker Bot"
+          git add price_history.json
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Update price history" && git push)
