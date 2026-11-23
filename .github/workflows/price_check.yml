@@ -1,8 +1,8 @@
-name: 20-Min Price & Bank Offer Agent
+name: 10-Min Price & Bank Offer Agent
 
 on:
   schedule:
-    - cron: '*/20 * * * *'
+    - cron: '*/10 * * * *'
   workflow_dispatch:
 
 permissions:
@@ -22,7 +22,7 @@ jobs:
 
       - name: Install dependencies & Playwright Chromium
         run: |
-          pip install playwright playwright-stealth google-genai requests
+          pip install playwright google-genai requests
           playwright install chromium
           playwright install-deps chromium
 
