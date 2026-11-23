@@ -28,18 +28,18 @@ def ask_ai(prompt):
 
 def clean_url(url):
     url = url.strip()
-    m = re.search(r"(https?://(?:www\.)?amazon\.in).*?/dp/([A-Z0-9]{10})", url)
+    m = re.search(r"amazon\.in.*?/dp/([A-Z0-9]{10})", url)
     if m:
-        return f"https://amazon.in{m.group(2)}"
-    return url.split("?")[0]
+        return "https://www." + "amazon.in/dp/" + m.group(1)
+    return url.split("?")
 
 def get_page_info(url):
     headers = {"Accept-Language": "en-IN,en;q=0.9", "Referer": "https://google.com"}
     for browser in ["chrome", "chrome124", "safari"]:
         r = cffi_req.get(url, impersonate=browser, headers=headers, timeout=15)
         soup = BeautifulSoup(r.text, "html.parser")
-        title = soup.title.string.strip() if soup.title and soup.title.string else "Product"
-        title = re.sub(r"^(Amazon\.in\s*:\s*|Buy\s+)", "", title).split(":")[0].split("|")[0][:60].strip()
+        raw_title = soup.title.string.strip() if soup.title and soup.title.string else "Product"
+        title = re.sub(r"^(Amazon\.in\s*:\s*|Buy\s+)", "", raw_title).split(":").split("|")[:60].strip()
         for tag in soup(["script", "style", "nav", "footer"]):
             tag.decompose()
         text = " ".join(soup.get_text(" ").split())
@@ -54,7 +54,7 @@ def process_telegram_commands(products, history):
     try:
         r = requests.get(f"{TG_BASE}/getUpdates", params={"offset": offset, "timeout": 5}, timeout=10).json()
     except Exception as e:
-        print("TG getUpdates err:", e)
+        print("TG getUpdates err:", e, flush=True)
         return products, history
 
     new_offset = offset
@@ -71,13 +71,13 @@ def process_telegram_commands(products, history):
             if not products:
                 send_tg("📋 *Your tracking list is empty.* Send any product link to add it!")
             else:
-                lines = [f"{i+1}. *{p['name']}*\n   [Link]({p['url']})" for i, p in enumerate(products)]
+                lines = [f"{i+1}. *{p['name']}*\n   {p['url']}" for i, p in enumerate(products)]
                 send_tg("📋 *Currently Tracking Products:*\n\n" + "\n".join(lines))
 
         elif text.lower().startswith("/remove"):
             parts = text.split()
-            if len(parts) == 2 and parts[1].isdigit():
-                idx = int(parts[1]) - 1
+            if len(parts) == 2 and parts.isdigit():
+                idx = int(parts) - 1
                 if 0 <= idx < len(products):
                     removed = products.pop(idx)
                     history.pop(removed["url"], None)
@@ -88,7 +88,7 @@ def process_telegram_commands(products, history):
         else:
             urls = re.findall(r"https?://\S+", text)
             if urls:
-                raw_url = urls[0]
+                raw_url = urls
                 cleaned = clean_url(raw_url)
                 custom_name = text.replace(raw_url, "").strip()
 
