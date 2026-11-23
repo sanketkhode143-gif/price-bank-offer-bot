@@ -11,7 +11,7 @@ def send_tg(msg):
     requests.post(api, json={"chat_id": os.environ["TELEGRAM_CHAT_ID"], "text": msg, "parse_mode": "Markdown"}, timeout=10)
 
 def ask_ai(prompt):
-    for m in ["gemini-3.8-flash", "gemini-2.5-flash", "gemini-2.5-flash-lite"]:
+    for m in ["gemini-3.5-flash-lite", "gemini-3.8-flash"]:
         for _ in range(2):
             try:
                 res = client.models.generate_content(
