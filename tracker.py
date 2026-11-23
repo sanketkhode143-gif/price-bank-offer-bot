@@ -3,6 +3,7 @@ import json
 import time
 import requests
 from playwright.sync_api import sync_playwright
+from playwright_stealth import Stealth
 from google import genai
 from google.genai import types
 
@@ -22,18 +23,22 @@ def send_telegram(message):
     })
 
 def fetch_page_text(url):
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
+    with Stealth().use_sync(sync_playwright()) as p:
+        browser = p.chromium.launch(
+            headless=True,
+            args=["--disable-blink-features=AutomationControlled", "--no-sandbox"]
+        )
         context = browser.new_context(
-            user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
             viewport={"width": 1366, "height": 768},
-            locale="en-IN"
+            locale="en-IN",
+            timezone_id="Asia/Kolkata"
         )
         page = context.new_page()
         try:
             page.goto(url, wait_until="domcontentloaded", timeout=45000)
-            page.wait_for_timeout(4000)
-            
+            page.wait_for_timeout(5000)
+
             offer_selectors = [
                 "text=/Bank Offer/i",
                 "text=/View.*more offers/i",
@@ -49,7 +54,9 @@ def fetch_page_text(url):
                 except Exception:
                     pass
 
+            title = page.title()
             text = page.inner_text("body")
+            print(f"Loaded page title: {title[:80]} | Text length: {len(text)}")
             return text[:18000]
         finally:
             browser.close()
@@ -90,10 +97,12 @@ def main():
     for item in products:
         name = item["name"]
         url = item["url"]
+        print(f"Checking: {name} -> {url}")
 
         try:
             text = fetch_page_text(url)
             data = analyze_offers(name, text)
+            print(f"AI Result for {name}: {data}")
 
             if data.get("is_blocked_or_unavailable") or not data.get("net_effective_price"):
                 print(f"Skipping {name}: page blocked or out of stock.")
@@ -137,7 +146,7 @@ def main():
                 "net_price": net_price,
                 "bank_offer": bank_offer
             }
-            time.sleep(4)  # Brief pause between multiple products
+            time.sleep(4)
 
         except Exception as e:
             print(f"Error checking {name}: {e}")
