@@ -22,7 +22,7 @@ jobs:
 
       - name: Install dependencies & Playwright Chromium
         run: |
-          pip install playwright google-genai requests
+          pip install playwright playwright-stealth google-genai requests
           playwright install chromium
           playwright install-deps chromium
 
