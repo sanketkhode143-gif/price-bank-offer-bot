@@ -5,8 +5,8 @@ from google.genai import types
 client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
 
 def send_tg(msg):
-    requests.post(f"https://telegram.org{os.environ['TELEGRAM_TOKEN']}/sendMessage",
-                  json={"chat_id": os.environ["TELEGRAM_CHAT_ID"], "text": msg, "parse_mode": "Markdown"})
+    api = "https://api." + "telegram.org/bot" + os.environ["TELEGRAM_TOKEN"] + "/sendMessage"
+    requests.post(api, json={"chat_id": os.environ["TELEGRAM_CHAT_ID"], "text": msg, "parse_mode": "Markdown"})
 
 def ask_ai(prompt):
     for m in ["gemini-3.8-flash", "gemini-3.8-flash-lite"]:
@@ -18,7 +18,7 @@ def ask_ai(prompt):
                 )
                 return json.loads(res.text)
             except Exception as e:
-                print(f"Retry {m}: {e}")
+                print("Retry:", m, e)
                 time.sleep(2)
     return None
 
@@ -28,8 +28,8 @@ def main():
 
     for item in products:
         try:
-            target_url = "https://jina.ai" + item["url"].strip()
-            r = requests.get(target_url, headers={"User-Agent": "Mozilla/5.0"}, timeout=30)
+            reader = "https://r." + "jina.ai/" + item["url"].strip()
+            r = requests.get(reader, headers={"User-Agent": "Mozilla/5.0"}, timeout=30)
             text = r.text
             print(item["name"], "len:", len(text))
             if len(text) < 800: continue
