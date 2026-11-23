@@ -39,6 +39,12 @@ def fetch_page_text(url):
             page.goto(url, wait_until="domcontentloaded", timeout=45000)
             page.wait_for_timeout(5000)
 
+            # Retry once if Amazon/Flipkart serves a lightweight bot-check page
+            if len(page.inner_text("body")) < 1000:
+                page.wait_for_timeout(3000)
+                page.reload(wait_until="domcontentloaded", timeout=45000)
+                page.wait_for_timeout(5000)
+
             offer_selectors = [
                 "text=/Bank Offer/i",
                 "text=/View.*more offers/i",
@@ -81,7 +87,7 @@ def analyze_offers(product_name, page_text):
     {page_text}
     """
     response = client.models.generate_content(
-        model="gemini-2.5-flash",
+        model="gemini-3.8-flash",
         contents=prompt,
         config=types.GenerateContentConfig(response_mime_type="application/json")
     )
@@ -101,6 +107,10 @@ def main():
 
         try:
             text = fetch_page_text(url)
+            if len(text) < 800:
+                print(f"Skipping {name}: page blocked (text too short).")
+                continue
+
             data = analyze_offers(name, text)
             print(f"AI Result for {name}: {data}")
 
