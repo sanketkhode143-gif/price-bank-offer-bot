@@ -6,7 +6,7 @@
     "full_offer_text": "Upto \u20b93,000.00 discount on select Credit Cards",
     "nc_emi_months": "None",
     "nc_emi_interest_discount": 15879,
-    "nc_emi_banks": "select Credit Cards, HDFC Bank Debit Cards",
+    "nc_emi_banks": "Select Credit Cards, HDFC Bank Debit Cards",
     "emi_net": 168111
   },
   "https://amazon.in/dp/B0DGG84ZZS": {
@@ -21,9 +21,9 @@
   },
   "https://amazon.in/dp/B01DLMD5O6": {
     "base": 19490,
-    "full_discount": 3000,
-    "net": 16490,
-    "full_offer_text": "Upto \u20b93,000.00 discount on select Credit Cards",
+    "full_discount": 0,
+    "net": 19490,
+    "full_offer_text": "None",
     "nc_emi_months": "None",
     "nc_emi_interest_discount": 1957,
     "nc_emi_banks": "select Credit Cards, HDFC Bank Debit Cards",
@@ -44,7 +44,7 @@
     "full_discount": 1500,
     "net": 25990,
     "full_offer_text": "Bank offers",
-    "nc_emi_months": "3 Months",
+    "nc_emi_months": "None",
     "nc_emi_interest_discount": 0,
     "nc_emi_banks": "None",
     "emi_net": 27490
