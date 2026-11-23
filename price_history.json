@@ -1,1 +1,17 @@
-{}
+{
+  "https://amazon.in/dp/B0HJ538NGF": {
+    "base": 222490.0,
+    "net": 183990.0,
+    "offer": "Upto \u20b93,000.00 discount on select Credit Cards"
+  },
+  "https://amazon.in/dp/B0DGG84ZZS": {
+    "base": 170990,
+    "net": 170990,
+    "offer": "Upto \u20b93,000.00 discount on select Credit Cards"
+  },
+  "https://amazon.in/dp/B01DLMD5O6": {
+    "base": 20990.0,
+    "net": 19490.0,
+    "offer": "Upto \u20b93,000.00 discount on select Credit Cards"
+  }
+}
