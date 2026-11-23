@@ -28,7 +28,8 @@ def main():
 
     for item in products:
         try:
-            r = requests.get(f"https://jina.ai{item['url']}", headers={"User-Agent": "Mozilla/5.0"}, timeout=30)
+            target_url = "https://jina.ai" + item["url"].strip()
+            r = requests.get(target_url, headers={"User-Agent": "Mozilla/5.0"}, timeout=30)
             text = r.text
             print(item["name"], "len:", len(text))
             if len(text) < 800: continue
