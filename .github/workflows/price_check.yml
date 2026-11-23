@@ -11,6 +11,7 @@ permissions:
 jobs:
   track-prices:
     runs-on: ubuntu-latest
+    timeout-minutes: 2
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -21,7 +22,7 @@ jobs:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: pip install google-genai requests
+        run: pip install curl_cffi beautifulsoup4 google-genai requests
 
       - name: Run Price & Offer Tracker
         env:
