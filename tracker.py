@@ -49,15 +49,55 @@ def main():
             if len(text) < 800:
                 continue
 
-            data = ask_ai(f"Extract current selling price (INR) and best instant bank/card discount from this product page text for {item['name']}. Return JSON: {{\"base\": number, \"net\": number, \"offer\": \"string\"}}.\n\n{text[:15000]}")
+            prompt = f"""
+            Analyze this Indian e-commerce product page text for "{item['name']}".
+            Extract:
+            1. "base": Current selling price in INR (ignore MRP/strikethrough).
+            2. "full_discount": Best instant bank/card discount amount in INR applicable on FULL PAYMENT (one-time swipe, non-EMI). Put 0 if none.
+            3. "net": Final net price for full payment (base - full_discount).
+            4. "full_offer_text": Short summary of which bank/card gives the full payment discount (or "None").
+            5. "nc_emi_months": Maximum No Cost EMI tenure available (e.g., "6 Months", "9 Months", "12 Months", or "None").
+            6. "nc_emi_interest_discount": Maximum interest discount / upfront EMI discount amount in INR mentioned for No Cost EMI (e.g., "Upto ₹4,500 interest discount on HDFC/ICICI" or "None").
+
+            Return ONLY valid JSON with these exact keys:
+            {{"base": number, "full_discount": number, "net": number, "full_offer_text": "string", "nc_emi_months": "string", "nc_emi_interest_discount": "string"}}
+
+            Page Text:
+            {text[:18000]}
+            """
+
+            data = ask_ai(prompt)
             if not data or not data.get("net"):
                 continue
 
             print(item["name"], "->", data, flush=True)
             prev = history.get(item["url"])
 
-            if prev and (data["net"] < prev["net"] or data["base"] < prev["base"] or data["offer"] != prev["offer"]):
-                send_tg(f"🚨 *{item['name']}*\nBase: ₹{data['base']:,} | Net: *₹{data['net']:,}*\nOffer: {data['offer']}\n[Link]({item['url']})")
+            changed = False
+            if prev:
+                if (
+                    data["net"] < prev.get("net", data["net"])
+                    or data["base"] < prev.get("base", data["base"])
+                    or data["full_offer_text"] != prev.get("full_offer_text", "")
+                    or data["nc_emi_months"] != prev.get("nc_emi_months", "")
+                    or data["nc_emi_interest_discount"] != prev.get("nc_emi_interest_discount", "")
+                ):
+                    changed = True
+
+            if changed:
+                msg = (
+                    f"🚨 *PRICE / OFFER UPDATE*\n\n"
+                    f"*{item['name']}*\n"
+                    f"• *Base Price:* ₹{data['base']:,}\n\n"
+                    f"💳 *Full Payment Offer:*\n"
+                    f"• *Discount:* ₹{data['full_discount']:,} ({data['full_offer_text']})\n"
+                    f"• *Final Net Price:* *₹{data['net']:,}*\n\n"
+                    f"📅 *No Cost EMI Offer:*\n"
+                    f"• *Max Tenure:* {data['nc_emi_months']}\n"
+                    f"• *Interest Discount:* {data['nc_emi_interest_discount']}\n\n"
+                    f"[Open Product Link]({item['url']})"
+                )
+                send_tg(msg)
 
             history[item["url"]] = data
             time.sleep(1)
