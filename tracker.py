@@ -1,6 +1,7 @@
 import os
 import json
 import time
+import random
 import requests
 from playwright.sync_api import sync_playwright
 from playwright_stealth import Stealth
@@ -12,6 +13,12 @@ TELEGRAM_TOKEN = os.environ["TELEGRAM_TOKEN"]
 TELEGRAM_CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
 
 client = genai.Client(api_key=GEMINI_API_KEY)
+
+USER_AGENTS = [
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+]
 
 def send_telegram(message):
     url = f"https://telegram.org{TELEGRAM_TOKEN}/sendMessage"
@@ -29,7 +36,7 @@ def fetch_page_text(url):
             args=["--disable-blink-features=AutomationControlled", "--no-sandbox"]
         )
         context = browser.new_context(
-            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+            user_agent=random.choice(USER_AGENTS),
             viewport={"width": 1366, "height": 768},
             locale="en-IN",
             timezone_id="Asia/Kolkata"
@@ -39,11 +46,14 @@ def fetch_page_text(url):
             page.goto(url, wait_until="domcontentloaded", timeout=45000)
             page.wait_for_timeout(5000)
 
-            # Retry once if Amazon/Flipkart serves a lightweight bot-check page
-            if len(page.inner_text("body")) < 1000:
-                page.wait_for_timeout(3000)
-                page.reload(wait_until="domcontentloaded", timeout=45000)
-                page.wait_for_timeout(5000)
+            # Retry up to 2 times if Amazon serves a short bot-check page
+            for _ in range(2):
+                if len(page.inner_text("body")) < 1000:
+                    page.wait_for_timeout(4000)
+                    page.reload(wait_until="domcontentloaded", timeout=45000)
+                    page.wait_for_timeout(5000)
+                else:
+                    break
 
             offer_selectors = [
                 "text=/Bank Offer/i",
@@ -86,12 +96,24 @@ def analyze_offers(product_name, page_text):
     Page Text:
     {page_text}
     """
-    response = client.models.generate_content(
-        model="gemini-3.8-flash",
-        contents=prompt,
-        config=types.GenerateContentConfig(response_mime_type="application/json")
-    )
-    return json.loads(response.text)
+    models_to_try = ["gemini-3.8-flash", "gemini-3.8-flash-lite", "gemini-2.5-flash-lite"]
+    last_error = None
+
+    for model_name in models_to_try:
+        for attempt in range(2):
+            try:
+                response = client.models.generate_content(
+                    model=model_name,
+                    contents=prompt,
+                    config=types.GenerateContentConfig(response_mime_type="application/json")
+                )
+                return json.loads(response.text)
+            except Exception as e:
+                last_error = e
+                print(f"Model {model_name} busy (attempt {attempt + 1}), retrying...")
+                time.sleep(3)
+
+    raise last_error
 
 def main():
     with open("products.json", "r") as f:
@@ -109,6 +131,7 @@ def main():
             text = fetch_page_text(url)
             if len(text) < 800:
                 print(f"Skipping {name}: page blocked (text too short).")
+                time.sleep(8)
                 continue
 
             data = analyze_offers(name, text)
@@ -156,7 +179,7 @@ def main():
                 "net_price": net_price,
                 "bank_offer": bank_offer
             }
-            time.sleep(4)
+            time.sleep(8)
 
         except Exception as e:
             print(f"Error checking {name}: {e}")
