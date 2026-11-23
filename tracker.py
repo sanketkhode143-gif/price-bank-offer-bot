@@ -11,17 +11,31 @@ def send_tg(msg):
     requests.post(api, json={"chat_id": os.environ["TELEGRAM_CHAT_ID"], "text": msg, "parse_mode": "Markdown"}, timeout=10)
 
 def ask_ai(prompt):
-    for m in ["gemini-3.8-flash", "gemini-3.8-flash-lite"]:
-        try:
-            res = client.models.generate_content(
-                model=m, contents=prompt,
-                config=types.GenerateContentConfig(response_mime_type="application/json")
-            )
-            return json.loads(res.text)
-        except Exception as e:
-            print("AI retry:", m, e)
-            time.sleep(1)
+    for m in ["gemini-3.8-flash", "gemini-2.5-flash", "gemini-2.5-flash-lite"]:
+        for _ in range(2):
+            try:
+                res = client.models.generate_content(
+                    model=m, contents=prompt,
+                    config=types.GenerateContentConfig(response_mime_type="application/json")
+                )
+                return json.loads(res.text)
+            except Exception as e:
+                print("AI retry:", m, e, flush=True)
+                time.sleep(2)
     return None
+
+def get_page_text(url):
+    headers = {"Accept-Language": "en-IN,en;q=0.9", "Referer": "https://google.com"}
+    for browser in ["chrome", "chrome124", "safari"]:
+        r = cffi_req.get(url.strip(), impersonate=browser, headers=headers, timeout=15)
+        soup = BeautifulSoup(r.text, "html.parser")
+        for tag in soup(["script", "style", "nav", "footer"]):
+            tag.decompose()
+        text = " ".join(soup.get_text(" ").split())
+        if len(text) >= 800:
+            return text
+        time.sleep(1.5)
+    return ""
 
 def main():
     products = json.load(open("products.json"))
@@ -29,11 +43,7 @@ def main():
 
     for item in products:
         try:
-            r = cffi_req.get(item["url"].strip(), impersonate="chrome", timeout=15)
-            soup = BeautifulSoup(r.text, "html.parser")
-            for tag in soup(["script", "style", "nav", "footer"]):
-                tag.decompose()
-            text = " ".join(soup.get_text(" ").split())
+            text = get_page_text(item["url"])
             print(item["name"], "len:", len(text), flush=True)
 
             if len(text) < 800:
