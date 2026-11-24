@@ -206,31 +206,5 @@ def main():
             Analyze this Indian e-commerce product page text for "{item['name']}".
 
             STRICT EXCLUSION RULE:
-            - Completely IGNORE and EXCLUDE any offers, discounts, cashback, or No Cost EMI plans that are ONLY for "Amazon Pay ICICI Credit Card" or "Bajaj Finserv / Bajaj Finance EMI Card".
-            - Only consider standard bank Credit/Debit cards (like HDFC, SBI, ICICI regular cards, Axis, Kotak, IDFC, BOB, OneCard, etc.).
-
-            Extract these exact fields:
-            1. "product_title": Clean short product title (max 60 chars) from the page.
-            2. "base": Current selling price in INR as an integer (ignore MRP/strikethrough).
-            3. "coupon": On-page clickable coupon/voucher discount in INR as an integer (e.g., "Apply ₹2,000 coupon", "Save ₹500 with coupon"). Put 0 if none.
-            4. "full_discount": Best instant bank/card discount amount in INR on FULL PAYMENT (one-time payment, excluding Amazon Pay ICICI & Bajaj Finance). Put 0 if none.
-            5. "full_offer_text": Short summary of eligible banks/cards for full payment discount (excluding Amazon Pay ICICI & Bajaj Finance, or "None").
-            6. "nc_emi_months": Maximum No Cost EMI tenure in months available on eligible bank cards (e.g., "6 Months", "12 Months", "18 Months", "24 Months", or "None").
-            7. "nc_emi_interest_discount": Maximum interest discount amount in INR (as a number) available on eligible bank cards for No Cost EMI (excluding Amazon Pay ICICI & Bajaj Finance). Put 0 if none.
-            8. "nc_emi_banks": Short list of eligible banks for this No Cost EMI offer (excluding Amazon Pay ICICI & Bajaj Finance, or "None").
-
-            Return ONLY valid JSON with these exact keys:
-            {{"product_title": "string", "base": number, "coupon": number, "full_discount": number, "full_offer_text": "string", "nc_emi_months": "string", "nc_emi_interest_discount": number, "nc_emi_banks": "string"}}
-
-            Page Text:
-            {text[:35000]}
-            """
-
-      data = ask_ai(prompt)
-      if not data or not data.get("base"):
-        continue
-
-      if item["name"] in ("Product", "", None) or len(item["name"]) < 4:
-        ai_title = (data.get("product_title") or "").strip()
-        if ai_title and ai_title.lower() != "product":
-          item["name
+            - Completely IGNORE and EXCLUDE any offers, discounts, cashback, or No Cost EMI plans that are ONLY for "Amazon Pay ICICI Credit Card" or "Bajaj Finserv
+    
