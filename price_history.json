@@ -5,9 +5,9 @@
     "net": 180990,
     "full_offer_text": "Upto \u20b93,000.00 discount on select Credit Cards",
     "nc_emi_months": "None",
-    "nc_emi_interest_discount": 0,
-    "nc_emi_banks": "None",
-    "emi_net": 183990
+    "nc_emi_interest_discount": 15879,
+    "nc_emi_banks": "select Credit Cards, HDFC Bank Debit Cards",
+    "emi_net": 168111
   },
   "https://amazon.in/dp/B0DGG84ZZS": {
     "base": 170990,
@@ -16,7 +16,7 @@
     "full_offer_text": "Upto \u20b93,000.00 discount on select Credit Cards",
     "nc_emi_months": "None",
     "nc_emi_interest_discount": 14757,
-    "nc_emi_banks": "Select Credit Cards, HDFC Bank Debit Cards",
+    "nc_emi_banks": "select Credit Cards, HDFC Bank Debit Cards",
     "emi_net": 156233
   },
   "https://amazon.in/dp/B01DLMD5O6": {
@@ -36,7 +36,7 @@
     "full_offer_text": "Upto \u20b91,250.00 discount on select Credit Cards",
     "nc_emi_months": "None",
     "nc_emi_interest_discount": 386,
-    "nc_emi_banks": "Select Credit Cards",
+    "nc_emi_banks": "select Credit Cards",
     "emi_net": 12803
   },
   "https://www.flipkart.com/canon-rf-50-mm-f1-8-stm-macro-prime-lens/p/itm5e79c9911e7ba": {
