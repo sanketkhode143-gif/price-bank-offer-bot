@@ -201,10 +201,3 @@ def main():
       print(item["name"], "len:", len(text), flush=True)
       if len(text) < 800:
         continue
-
-      prompt = f"""
-            Analyze this Indian e-commerce product page text for "{item['name']}".
-
-            STRICT EXCLUSION RULE:
-            - Completely IGNORE and EXCLUDE any offers, discounts, cashback, or No Cost EMI plans that are ONLY for "Amazon Pay ICICI Credit Card" or "Bajaj Finserv
-    
