@@ -233,19 +233,4 @@ def main():
       if item["name"] in ("Product", "", None) or len(item["name"]) < 4:
         ai_title = (data.get("product_title") or "").strip()
         if ai_title and ai_title.lower() != "product":
-          item["name"] = ai_title[:60]
-        elif scraped_title and scraped_title.lower() != "product":
-          item["name"] = scraped_title[:60]
-
-      base = int(round(data.get("base", 0)))
-      coupon = int(round(data.get("coupon", 0)))
-      full_disc = int(round(data.get("full_discount", 0)))
-      net = max(0, base - coupon - full_disc)
-      emi_disc = int(round(data.get("nc_emi_interest_discount", 0)))
-      emi_net = max(0, base - coupon - emi_disc)
-
-      data["base"] = base
-      data["coupon"] = coupon
-      data["full_discount"] = full_disc
-      data["net"] = net
-      data["nc_emi_interest_discount"] = emi_disc
+          item["name
