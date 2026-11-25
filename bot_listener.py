@@ -119,4 +119,172 @@ def fetch_and_reply_product(item, products, history):
     item["name"] = pname
     save_json("products.json", products)
 
-  base = int(round(float(data.get("base") or
+  base = int(round(float(data.get("base") or 0)))
+  coupon = int(round(float(data.get("coupon") or 0)))
+  full_disc = int(round(float(data.get("full_discount") or 0)))
+  net = max(0, base - coupon - full_disc)
+
+  emi_disc = int(round(float(data.get("nc_emi_interest_discount") or 0)))
+  emi_bank_disc = int(round(float(data.get("nc_emi_bank_discount") or 0)))
+  emi_net = max(0, base - coupon - emi_disc - emi_bank_disc)
+
+  data["base"] = base
+  data["coupon"] = coupon
+  data["full_discount"] = full_disc
+  data["net"] = net
+  data["nc_emi_interest_discount"] = emi_disc
+  data["nc_emi_bank_discount"] = emi_bank_disc
+  data["emi_net"] = emi_net
+
+  history[url] = data
+  save_json("price_history.json", history)
+
+  coupon_line = f"• *Coupon Discount:* ₹{coupon:,}\n" if coupon > 0 else ""
+  full_offer_txt = data.get("full_offer_text") or "None"
+  nc_months = data.get("nc_emi_months") or "None"
+  nc_banks = data.get("nc_emi_banks") or "None"
+  nc_bank_note = data.get("nc_emi_bank_note") or "None"
+
+  msg = (
+      f"🆕 *INITIAL PRICE & OFFERS*\n\n"
+      f"*{pname}*\n"
+      f"• *Base Price:* ₹{base:,}\n"
+      f"{coupon_line}\n"
+      f"💳 *Full Payment Offer:*\n"
+      f"• *Bank Discount:* ₹{full_disc:,} ({full_offer_txt})\n"
+      f"• *Final Net Price:* *₹{net:,}*\n\n"
+      f"📅 *No Cost EMI (Excl. Amazon ICICI & Bajaj):*\n"
+      f"• *Max No Cost Tenure:* {nc_months}\n"
+      f"• *Interest Discount:* ₹{emi_disc:,} ({nc_banks})\n"
+      f"• *Bank Discount:* ₹{emi_bank_disc:,} ({nc_bank_note})\n"
+      f"• *Net Cost (Base - Coupon - Interest - Bank):* *₹{emi_net:,}*\n\n"
+      f"[Open Product Link]({url})"
+  )
+  send_tg(msg, chat_id=chat_id, reply_to=reply_to)
+
+
+def poll_loop():
+  offset = 0
+  while True:
+    try:
+      r = requests.get(
+          f"{TG_BASE}/getUpdates",
+          params={"offset": offset, "timeout": 25},
+          timeout=35,
+      ).json()
+
+      products = load_json("products.json", [])
+      history = load_json("price_history.json", {})
+
+      for upd in r.get("result", []):
+        offset = max(offset, upd["update_id"] + 1)
+        msg = upd.get("message") or upd.get("channel_post") or {}
+        chat_id = str(msg.get("chat", {}).get("id", ""))
+        msg_id = msg.get("message_id")
+
+        if chat_id not in ALLOWED_CHATS:
+          continue
+
+        text = (msg.get("text") or "").strip()
+        if not text:
+          continue
+
+        if text.lower() == "/list":
+          if not products:
+            send_tg(
+                "📋 *Your tracking list is empty.* Send any product link to add"
+                " it!",
+                chat_id=chat_id,
+                reply_to=msg_id,
+            )
+          else:
+            lines = [
+                f"{i+1}. *{p['name']}*\n   {p['url']}"
+                for i, p in enumerate(products)
+            ]
+            send_tg(
+                "📋 *Currently Tracking Products:*\n\n" + "\n".join(lines),
+                chat_id=chat_id,
+                reply_to=msg_id,
+            )
+
+        elif text.lower().startswith("/remove"):
+          parts = text.split()
+          if len(parts) == 2 and parts[-1].isdigit():
+            idx = int(parts[-1]) - 1
+            if 0 <= idx < len(products):
+              removed = products.pop(idx)
+              history.pop(removed["url"], None)
+              save_json("products.json", products)
+              save_json("price_history.json", history)
+              send_tg(
+                  f"🗑️ *Removed:* {removed['name']}",
+                  chat_id=chat_id,
+                  reply_to=msg_id,
+              )
+            else:
+              send_tg(
+                  "⚠️ Invalid number. Send `/list` to see product numbers.",
+                  chat_id=chat_id,
+                  reply_to=msg_id,
+              )
+
+        else:
+          urls = re.findall(
+              r"(?:https?://)?(?:www\.)?(?:amazon\.in|amzn\.in|amzn\.to|flipkart\.com|dl\.flipkart\.com)\S+",
+              text,
+          )
+          if urls:
+            raw_url = next(iter(urls))
+            if not raw_url.startswith("http"):
+              raw_url = "https://" + raw_url
+            cleaned = clean_url(raw_url)
+            custom_name = text.replace(next(iter(urls)), "").strip()
+
+            existing = next((p for p in products if p["url"] == cleaned), None)
+            if existing:
+              send_tg(
+                  f"ℹ️ *Already in your list:*\n{cleaned}\n⏳ Fetching latest"
+                  " offers...",
+                  chat_id=chat_id,
+                  reply_to=msg_id,
+              )
+              fetch_and_reply_product(existing, products, history)
+            else:
+              auto_title, _ = get_page_info(cleaned)
+              final_name = custom_name if custom_name else auto_title
+              new_item = {
+                  "name": final_name,
+                  "url": cleaned,
+                  "chat_id": chat_id,
+                  "reply_to": msg_id,
+              }
+              products.append(new_item)
+              save_json("products.json", products)
+
+              send_tg(
+                  f"✅ *Added & Checking Live Offers...*\n\n"
+                  f"• *Name:* {final_name}\n"
+                  f"• *URL:* {cleaned}",
+                  chat_id=chat_id,
+                  reply_to=msg_id,
+              )
+              fetch_and_reply_product(new_item, products, history)
+
+    except Exception as e:
+      print("Listener error:", e, flush=True)
+      time.sleep(3)
+
+
+@app.route("/")
+def health():
+  return "Bot Listener Active", 200
+
+
+if __name__ == "__main__":
+  t = threading.Thread(target=poll_loop, daemon=True)
+  t.start()
+  port = int(os.environ.get("PORT", 10000))
+  app.run(host="0.0.0.0", port=port)
+
+    
