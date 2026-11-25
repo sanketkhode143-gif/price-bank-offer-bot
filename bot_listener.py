@@ -71,14 +71,17 @@ def fetch_and_reply_product(item, products, history):
       '5. "full_offer_text": Short summary of eligible banks/cards for'
       " full payment discount (excluding Amazon Pay ICICI & Bajaj"
       ' Finance, or "None").\n'
-      '6. "nc_emi_months": Maximum No Cost EMI tenure available on'
-      ' eligible bank cards (e.g., "6 Months", "9 Months", "12 Months",'
-      ' "18 Months", "24 Months", "36 Months"). If an explicit No Cost'
-      " tenure is not shown in the text, FALLBACK to deriving the tenure"
-      " from any mentioned monthly EMI / No Cost EMI monthly amount"
-      ' relative to price (e.g. "~12 Months (approx)" or "~6 Months'
-      ' (approx)"). Only return "None" if there is truly no EMI/No Cost'
-      " EMI info at all.\n"
+      '6. "nc_emi_months": Find ALL No Cost EMI tenures mentioned in the'
+      " text (such as 3m/3 months, 6m/6 months, 9m/9 months, 12m/12"
+      " months, 18m/18 months, 24m/24 months, 36m/36 months) on eligible"
+      " bank cards and return the MAXIMUM / LONGEST tenure (for example,"
+      ' if both 6 months and 12 months appear, return "12 Months"; if 36'
+      ' months appears, return "36 Months"). Do NOT settle for a smaller'
+      " tenure when a larger No Cost EMI tenure is present. If no explicit"
+      " tenure is shown in the text, FALLBACK to deriving the tenure from"
+      " any mentioned monthly EMI / No Cost EMI monthly amount relative to"
+      ' price (e.g. "~12 Months (approx)" or "~6 Months (approx)"). Only'
+      ' return "None" if there is truly no EMI/No Cost EMI info at all.\n'
       '7. "nc_emi_interest_discount": Interest waiver / interest discount'
       " amount in INR (as an integer) on No Cost EMI for eligible bank"
       " cards (excluding Amazon Pay ICICI & Bajaj Finance). Put 0 if"
@@ -99,7 +102,7 @@ def fetch_and_reply_product(item, products, history):
       ' "nc_emi_months": "string", "nc_emi_interest_discount": number,'
       ' "nc_emi_banks": "string", "nc_emi_bank_discount": number,'
       ' "nc_emi_bank_note": "string"}}\n\n'
-      f"Page Text:\n{text[:35000]}"
+      f"Page Text:\n{text[:45000]}"
   )
 
   data = ask_ai(prompt)
