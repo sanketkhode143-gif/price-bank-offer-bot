@@ -26,7 +26,7 @@ def clean_url(url: str) -> str:
     url = "https://" + url
   parsed = urlparse(url)
 
-  # Flipkart URLs: preserve pid/lid so product & offer pages resolve properly
+  # Flipkart URLs: keep pid/lid so product & offer pages resolve properly
   if "flipkart.com" in parsed.netloc:
     qs = parse_qs(parsed.query)
     kept = {}
@@ -68,7 +68,6 @@ def get_page_info(url: str):
   }
 
   html = ""
-  final_url = url
   for impersonate in ("chrome124", "chrome120", "safari17_0"):
     try:
       resp = cffi_requests.get(
@@ -80,7 +79,6 @@ def get_page_info(url: str):
       )
       if resp.status_code == 200 and len(resp.text) > 1500:
         html = resp.text
-        final_url = str(resp.url)
         break
     except Exception as e:
       print(f"Fetch error ({impersonate}): {e}", flush=True)
@@ -89,7 +87,6 @@ def get_page_info(url: str):
     try:
       resp = requests.get(url, headers=headers, timeout=20, allow_redirects=True)
       html = resp.text
-      final_url = str(resp.url)
     except Exception as e:
       print(f"Fallback requests error: {e}", flush=True)
       return "Product", ""
@@ -109,7 +106,7 @@ def get_page_info(url: str):
       re.sub(r"\s+", " ", ln).strip() for ln in soup.get_text("\n").splitlines()
   ]
   text = "\n".join(ln for ln in lines if ln)
-  return (title[:60] if title else "Product"), text
+  return (title[:80] if title else "Product"), text
 
 
 def ask_ai(prompt: str):
@@ -127,10 +124,7 @@ def ask_ai(prompt: str):
           raw = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw, flags=re.S).strip()
         return json.loads(raw)
       except genai_errors.APIError as e:
-        print(
-            f"AI retry: {model} {e.code} {e.message}",
-            flush=True,
-        )
+        print(f"AI retry: {model} {e.code} {e.message}", flush=True)
         if e.code in (503, 429, 500, 502, 504):
           time.sleep(2 * (attempt + 1))
           continue
@@ -139,6 +133,81 @@ def ask_ai(prompt: str):
         print(f"AI parse error ({model}): {e}", flush=True)
         time.sleep(1.5)
   return None
+
+
+def parse_product_offers(title: str, page_text: str):
+  prompt = f"""
+Extract pricing and bank/EMI offers from this product page text.
+STRICT RULES:
+1. Completely IGNORE and EXCLUDE any offer tied to "Amazon Pay ICICI", "ICICI Amazon", or "Bajaj Finserv / Bajaj Finance".
+2. Extract numeric amounts (in INR) where possible, plus concise offer notes.
+3. For No Cost EMI:
+   - Extract the longest/max No Cost EMI tenure mentioned (e.g., "6 months", "9 months", "12 months"). If not clearly stated on the page, set to "None".
+   - Extract interest discount amount (INR) and note on No Cost EMI.
+   - Extract any bank/card discount applicable with No Cost EMI (excluding Amazon Pay ICICI & Bajaj). If none, set amount to 0.
+4. Return ONLY valid JSON with this exact schema:
+{{
+  "product_name": "{title}",
+  "base_price": 0,
+  "coupon_discount": 0,
+  "full_payment_bank_discount": 0,
+  "full_payment_bank_note": "",
+  "no_cost_tenure": "None",
+  "no_cost_interest_discount": 0,
+  "no_cost_interest_note": "",
+  "no_cost_bank_discount": 0,
+  "no_cost_bank_note": ""
+}}
+
+Page text:
+{page_text[:14000]}
+"""
+  return ask_ai(prompt)
+
+
+def _fmt_inr(val):
+  try:
+    n = int(round(float(val)))
+    return f"₹{n:,}"
+  except Exception:
+    return str(val)
+
+
+def format_offer_message(data: dict, url: str, header_tag: str = "🆕 INITIAL PRICE & OFFERS"):
+  name = data.get("product_name") or "Product"
+  base = int(round(float(data.get("base_price") or 0)))
+  coupon = int(round(float(data.get("coupon_discount") or 0)))
+
+  fp_bank = int(round(float(data.get("full_payment_bank_discount") or 0)))
+  fp_note = (data.get("full_payment_bank_note") or "").strip()
+  fp_net = max(0, base - coupon - fp_bank)
+
+  tenure = (data.get("no_cost_tenure") or "None").strip()
+  nc_int = int(round(float(data.get("no_cost_interest_discount") or 0)))
+  nc_int_note = (data.get("no_cost_interest_note") or "").strip()
+  nc_bank = int(round(float(data.get("no_cost_bank_discount") or 0)))
+  nc_bank_note = (data.get("no_cost_bank_note") or "").strip()
+
+  nc_net = max(0, base - coupon - nc_int - nc_bank)
+
+  fp_bank_str = f"{_fmt_inr(fp_bank)} ({fp_note})" if fp_note else _fmt_inr(fp_bank)
+  nc_int_str = f"{_fmt_inr(nc_int)} ({nc_int_note})" if nc_int_note else _fmt_inr(nc_int)
+  nc_bank_str = f"{_fmt_inr(nc_bank)} ({nc_bank_note})" if nc_bank_note else _fmt_inr(nc_bank)
+
+  return (
+      f"*{header_tag}*\n\n"
+      f"*{name}*\n"
+      f"• Base Price: {_fmt_inr(base)}\n\n"
+      f"💳 *Full Payment Offer:*\n"
+      f"• Bank Discount: {fp_bank_str}\n"
+      f"• Final Net Price: {_fmt_inr(fp_net)}\n\n"
+      f"📅 *No Cost EMI (Excl. Amazon ICICI & Bajaj):*\n"
+      f"• Max No Cost Tenure: {tenure}\n"
+      f"• Interest Discount: {nc_int_str}\n"
+      f"• Bank Discount: {nc_bank_str}\n"
+      f"• Net Cost (Base - Coupon - Interest - Bank): {_fmt_inr(nc_net)}\n\n"
+      f"[Open Product Link]({url})"
+  )
 
 
 def send_tg(msg: str, chat_id: str = None, reply_to: int = None):
