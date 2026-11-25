@@ -76,7 +76,7 @@ def fetch_and_reply_product(item, products, history):
       ' "18 Months", "24 Months"). If an explicit No Cost tenure is not'
       ' shown in the text, FALLBACK to deriving the tenure from any'
       ' mentioned monthly EMI / No Cost EMI monthly amount relative to'
-      ' price (e.g. "~12 Months (approx)" or "~6 Months (approx)"). Only'
+      ' price (e.g. "~12 Months " or "~6 Months . Only'
       ' return "None" if there is truly no EMI/No Cost EMI info at all.\n'
       '7. "nc_emi_interest_discount": Maximum interest discount / savings'
       " amount in INR (as an integer) available on eligible bank cards for"
