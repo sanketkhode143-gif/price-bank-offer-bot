@@ -81,7 +81,7 @@ def fetch_and_reply_product(item, products, history):
       " tenure is shown in the text, FALLBACK to deriving the tenure from"
       " any mentioned monthly EMI / No Cost EMI monthly amount relative to"
       ' price (e.g. "~12 Months (approx)" or "~6 Months (approx)"). Only'
-      ' return "None" if there is truly no EMI/No Cost EMI info at all.\n'
+      ' return "None" if there is truly no EMI/No Cost EMI info at all. If page text shows an offer row like "No Cost EMI ₹7,437 x 12m", set nc_emi_months to "12 Months". Match the amount and tenure from the EMI offer row, not an unrelated Amazon Pay ICICI EMI line. When that same No Cost EMI row has a regular bank card such as "ICICI Bank Credit Card -₹4,250", extract 4250 as nc_emi_bank_discount and the card name as nc_emi_bank_note. Exclude Amazon Pay ICICI cashback and Bajaj card offers from these fields.\n'
       '7. "nc_emi_interest_discount": Interest waiver / interest discount'
       " amount in INR (as an integer) on No Cost EMI for eligible bank"
       " cards (excluding Amazon Pay ICICI & Bajaj Finance). Put 0 if"
