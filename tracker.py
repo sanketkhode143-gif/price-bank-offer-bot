@@ -139,10 +139,11 @@ def parse_product_offers(title: str, page_text: str):
   prompt = f"""
 Extract pricing and bank/EMI offers from this product page text.
 STRICT RULES:
-1. Completely IGNORE and EXCLUDE any offer tied to "Amazon Pay ICICI", "ICICI Amazon", or "Bajaj Finserv / Bajaj Finance".
+1. ONLY exclude offers specifically tied to "Amazon Pay ICICI" (or "Amazon ICICI") and "Bajaj Finserv" / "Bajaj Finance".
+   DO NOT exclude regular "ICICI Bank Credit Card", "HDFC Credit Card", "SBI", "Axis", or other standard bank credit/debit card offers.
 2. Extract numeric amounts (in INR) where possible, plus concise offer notes.
 3. For No Cost EMI:
-   - Extract the longest/max No Cost EMI tenure mentioned (e.g., "6 months", "9 months", "12 months"). If not clearly stated on the page, set to "None".
+   - Look for tenures like "3m", "6m", "9m", "12m", "3 months", "6 months", "9 months", "12 months", "18 months", "24 months" associated with No Cost EMI. Set "no_cost_tenure" to the longest/max No Cost tenure found (e.g., "12 months"), or "None" if truly absent.
    - Extract interest discount amount (INR) and note on No Cost EMI.
    - Extract any bank/card discount applicable with No Cost EMI (excluding Amazon Pay ICICI & Bajaj). If none, set amount to 0.
 4. Return ONLY valid JSON with this exact schema:
@@ -160,7 +161,7 @@ STRICT RULES:
 }}
 
 Page text:
-{page_text[:14000]}
+{page_text[:16000]}
 """
   return ask_ai(prompt)
 
@@ -173,7 +174,9 @@ def _fmt_inr(val):
     return str(val)
 
 
-def format_offer_message(data: dict, url: str, header_tag: str = "🆕 INITIAL PRICE & OFFERS"):
+def format_offer_message(
+    data: dict, url: str, header_tag: str = "🆕 INITIAL PRICE & OFFERS"
+):
   name = data.get("product_name") or "Product"
   base = int(round(float(data.get("base_price") or 0)))
   coupon = int(round(float(data.get("coupon_discount") or 0)))
@@ -190,9 +193,17 @@ def format_offer_message(data: dict, url: str, header_tag: str = "🆕 INITIAL P
 
   nc_net = max(0, base - coupon - nc_int - nc_bank)
 
-  fp_bank_str = f"{_fmt_inr(fp_bank)} ({fp_note})" if fp_note else _fmt_inr(fp_bank)
-  nc_int_str = f"{_fmt_inr(nc_int)} ({nc_int_note})" if nc_int_note else _fmt_inr(nc_int)
-  nc_bank_str = f"{_fmt_inr(nc_bank)} ({nc_bank_note})" if nc_bank_note else _fmt_inr(nc_bank)
+  fp_bank_str = (
+      f"{_fmt_inr(fp_bank)} ({fp_note})" if fp_note else _fmt_inr(fp_bank)
+  )
+  nc_int_str = (
+      f"{_fmt_inr(nc_int)} ({nc_int_note})" if nc_int_note else _fmt_inr(nc_int)
+  )
+  nc_bank_str = (
+      f"{_fmt_inr(nc_bank)} ({nc_bank_note})"
+      if nc_bank_note
+      else _fmt_inr(nc_bank)
+  )
 
   return (
       f"*{header_tag}*\n\n"
