@@ -52,10 +52,10 @@ def fetch_and_reply_product(item, products, history):
   prompt = (
       f'Analyze this Indian e-commerce product page text for "{pname}".\n\n'
       "STRICT EXCLUSION RULE:\n"
-      "- Completely IGNORE and EXCLUDE any offers, discounts, cashback,"
-      ' or No Cost EMI plans that are ONLY for "Amazon Pay ICICI Credit'
-      ' Card" or "Bajaj Finserv / Bajaj Finance EMI Card".\n'
-      "- Only consider standard bank Credit/Debit cards (like HDFC, SBI,"
+      "- ONLY ignore and exclude offers specifically for \"Amazon Pay ICICI"
+      ' Credit Card" (or "Amazon ICICI") and "Bajaj Finserv / Bajaj Finance'
+      ' EMI Card".\n'
+      "- DO NOT exclude standard bank Credit/Debit cards (like HDFC, SBI,"
       " ICICI regular cards, Axis, Kotak, IDFC, BOB, OneCard, etc.).\n\n"
       "Extract these exact fields:\n"
       '1. "product_title": Clean short product title (max 60 chars) from'
@@ -71,20 +71,28 @@ def fetch_and_reply_product(item, products, history):
       '5. "full_offer_text": Short summary of eligible banks/cards for'
       " full payment discount (excluding Amazon Pay ICICI & Bajaj"
       ' Finance, or "None").\n'
-      '6. "nc_emi_months": Maximum No Cost EMI tenure in months available'
-      ' on eligible bank cards (e.g., "6 Months", "12 Months", "18'
-      ' Months", "24 Months", or "None").\n'
-      '7. "nc_emi_interest_discount": Maximum interest discount amount in'
-      " INR (as a number) available on eligible bank cards for No Cost EMI"
-      " (excluding Amazon Pay ICICI & Bajaj Finance). Put 0 if none.\n"
+      '6. "nc_emi_months": Maximum No Cost EMI tenure available on'
+      ' eligible bank cards (e.g., "6 Months", "9 Months", "12 Months",'
+      ' "18 Months", "24 Months", or "None").\n'
+      '7. "nc_emi_interest_discount": Maximum interest discount / savings'
+      " amount in INR (as an integer) available on eligible bank cards for"
+      " No Cost EMI (excluding Amazon Pay ICICI & Bajaj Finance). Put 0 if"
+      " none.\n"
       '8. "nc_emi_banks": Short list of eligible banks for this No Cost'
-      " EMI offer (excluding Amazon Pay ICICI & Bajaj Finance, or"
-      ' "None").\n\n'
+      " EMI interest offer (excluding Amazon Pay ICICI & Bajaj Finance, or"
+      ' "None").\n'
+      '9. "nc_emi_bank_discount": Additional bank/card discount amount in'
+      " INR (as an integer) applicable with No Cost EMI (excluding Amazon"
+      " Pay ICICI & Bajaj Finance). Put 0 if none.\n"
+      '10. "nc_emi_bank_note": Short summary of eligible banks/cards for'
+      " No Cost EMI bank discount (excluding Amazon Pay ICICI & Bajaj"
+      ' Finance, or "None").\n\n'
       "Return ONLY valid JSON with these exact keys:\n"
       '{{"product_title": "string", "base": number, "coupon": number,'
       ' "full_discount": number, "full_offer_text": "string",'
       ' "nc_emi_months": "string", "nc_emi_interest_discount": number,'
-      ' "nc_emi_banks": "string"}}\n\n'
+      ' "nc_emi_banks": "string", "nc_emi_bank_discount": number,'
+      ' "nc_emi_bank_note": "string"}}\n\n'
       f"Page Text:\n{text[:35000]}"
   )
 
@@ -101,27 +109,31 @@ def fetch_and_reply_product(item, products, history):
     item["name"] = pname
     save_json("products.json", products)
 
-  base = int(round(data.get("base", 0)))
-  coupon = int(round(data.get("coupon", 0)))
-  full_disc = int(round(data.get("full_discount", 0)))
+  base = int(round(float(data.get("base") or 0)))
+  coupon = int(round(float(data.get("coupon") or 0)))
+  full_disc = int(round(float(data.get("full_discount") or 0)))
   net = max(0, base - coupon - full_disc)
-  emi_disc = int(round(data.get("nc_emi_interest_discount", 0)))
-  emi_net = max(0, base - coupon - emi_disc)
+
+  emi_disc = int(round(float(data.get("nc_emi_interest_discount") or 0)))
+  emi_bank_disc = int(round(float(data.get("nc_emi_bank_discount") or 0)))
+  emi_net = max(0, base - coupon - emi_disc - emi_bank_disc)
 
   data["base"] = base
   data["coupon"] = coupon
   data["full_discount"] = full_disc
   data["net"] = net
   data["nc_emi_interest_discount"] = emi_disc
+  data["nc_emi_bank_discount"] = emi_bank_disc
   data["emi_net"] = emi_net
 
   history[url] = data
   save_json("price_history.json", history)
 
   coupon_line = f"• *Coupon Discount:* ₹{coupon:,}\n" if coupon > 0 else ""
-  full_offer_txt = data.get("full_offer_text", "None")
-  nc_months = data.get("nc_emi_months", "None")
-  nc_banks = data.get("nc_emi_banks", "None")
+  full_offer_txt = data.get("full_offer_text") or "None"
+  nc_months = data.get("nc_emi_months") or "None"
+  nc_banks = data.get("nc_emi_banks") or "None"
+  nc_bank_note = data.get("nc_emi_bank_note") or "None"
 
   msg = (
       f"🆕 *INITIAL PRICE & OFFERS*\n\n"
@@ -134,7 +146,8 @@ def fetch_and_reply_product(item, products, history):
       f"📅 *No Cost EMI (Excl. Amazon ICICI & Bajaj):*\n"
       f"• *Max No Cost Tenure:* {nc_months}\n"
       f"• *Interest Discount:* ₹{emi_disc:,} ({nc_banks})\n"
-      f"• *Net Cost (Base - Coupon - Interest):* *₹{emi_net:,}*\n\n"
+      f"• *Bank Discount:* ₹{emi_bank_disc:,} ({nc_bank_note})\n"
+      f"• *Net Cost (Base - Coupon - Interest - Bank):* *₹{emi_net:,}*\n\n"
       f"[Open Product Link]({url})"
   )
   send_tg(msg, chat_id=chat_id, reply_to=reply_to)
