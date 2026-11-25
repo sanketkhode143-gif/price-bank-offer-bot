@@ -52,7 +52,7 @@ def fetch_and_reply_product(item, products, history):
   prompt = (
       f'Analyze this Indian e-commerce product page text for "{pname}".\n\n'
       "STRICT EXCLUSION RULE:\n"
-      "- ONLY ignore and exclude offers specifically for \"Amazon Pay ICICI"
+      '- ONLY ignore and exclude offers specifically for "Amazon Pay ICICI'
       ' Credit Card" (or "Amazon ICICI") and "Bajaj Finserv / Bajaj Finance'
       ' EMI Card".\n'
       "- DO NOT exclude standard bank Credit/Debit cards (like HDFC, SBI,"
@@ -73,21 +73,23 @@ def fetch_and_reply_product(item, products, history):
       ' Finance, or "None").\n'
       '6. "nc_emi_months": Maximum No Cost EMI tenure available on'
       ' eligible bank cards (e.g., "6 Months", "9 Months", "12 Months",'
-      ' "18 Months", "24 Months", "36 Months"). If an explicit No Cost tenure is not'
-      ' shown in the text, FALLBACK to deriving the tenure from any'
-      ' mentioned monthly EMI / No Cost EMI monthly amount relative to'
-      ' price (e.g. "~12 Months " or "~6 Months . Only'
-      ' return "None" if there is truly no EMI/No Cost EMI info at all.\n'
-      '7. "nc_emi_interest_discount": Maximum interest discount / savings'
-      " amount in INR (as an integer) available on eligible bank cards for"
-      " No Cost EMI (excluding Amazon Pay ICICI & Bajaj Finance). Put 0 if"
+      ' "18 Months", "24 Months", "36 Months"). If an explicit No Cost'
+      " tenure is not shown in the text, FALLBACK to deriving the tenure"
+      " from any mentioned monthly EMI / No Cost EMI monthly amount"
+      ' relative to price (e.g. "~12 Months (approx)" or "~6 Months'
+      ' (approx)"). Only return "None" if there is truly no EMI/No Cost'
+      " EMI info at all.\n"
+      '7. "nc_emi_interest_discount": Interest waiver / interest discount'
+      " amount in INR (as an integer) on No Cost EMI for eligible bank"
+      " cards (excluding Amazon Pay ICICI & Bajaj Finance). Put 0 if"
       " none.\n"
       '8. "nc_emi_banks": Short list of eligible banks for this No Cost'
       " EMI interest offer (excluding Amazon Pay ICICI & Bajaj Finance, or"
       ' "None").\n'
-      '9. "nc_emi_bank_discount": Additional bank/card discount amount in'
-      " INR (as an integer) applicable with No Cost EMI (excluding Amazon"
-      " Pay ICICI & Bajaj Finance). Put 0 if none.\n"
+      '9. "nc_emi_bank_discount": Bank/card discount amount in INR (as an'
+      " integer) shown on a No Cost EMI card option (for example, a bank"
+      ' discount/savings like "-₹4,250" under a No Cost EMI card option,'
+      " excluding Amazon Pay ICICI & Bajaj Finance). Put 0 if none.\n"
       '10. "nc_emi_bank_note": Short summary of eligible banks/cards for'
       " No Cost EMI bank discount (excluding Amazon Pay ICICI & Bajaj"
       ' Finance, or "None").\n\n'
