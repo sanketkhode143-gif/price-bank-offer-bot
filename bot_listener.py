@@ -73,7 +73,7 @@ def fetch_and_reply_product(item, products, history):
       ' Finance, or "None").\n'
       '6. "nc_emi_months": Maximum No Cost EMI tenure available on'
       ' eligible bank cards (e.g., "6 Months", "9 Months", "12 Months",'
-      ' "18 Months", "24 Months"). If an explicit No Cost tenure is not'
+      ' "18 Months", "24 Months", "36 Months"). If an explicit No Cost tenure is not'
       ' shown in the text, FALLBACK to deriving the tenure from any'
       ' mentioned monthly EMI / No Cost EMI monthly amount relative to'
       ' price (e.g. "~12 Months " or "~6 Months . Only'
